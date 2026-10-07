@@ -1,0 +1,14 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+*.db
+storage/
+.pytest_cache/
+.coverage
+ROADMAP.MD
+
+
+demo_output.zip
+
