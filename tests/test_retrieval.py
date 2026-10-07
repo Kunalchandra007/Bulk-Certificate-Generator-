@@ -94,16 +94,28 @@ def test_download_certificate_409_if_failed(client):
 
 
 def test_download_zip_of_certificates(client):
-    resp = client.post("/api/jobs/", json=_valid_payload())
+    payload = _valid_payload()
+    payload["recipients"] = [
+        {"name": "Asha Rao", "email": "asha@example.com"},
+        {"name": "Zoë Müller", "email": "zoe@example.com"},
+        {"name": "A" * 90, "email": "long@example.com"}
+    ]
+    resp = client.post("/api/jobs/", json=payload)
     job_id = resp.json()["id"]
 
     resp_zip = client.get(f"/api/jobs/{job_id}/download/")
     assert resp_zip.status_code == 200
     assert resp_zip.headers["content-type"] == "application/zip"
+    
+    expected_filename = f"certificates-{str(job_id)[:8]}.zip"
+    assert resp_zip.headers["content-disposition"] == f'attachment; filename="{expected_filename}"'
 
     # Read the ZIP
     with zipfile.ZipFile(BytesIO(resp_zip.content)) as zf:
         names = zf.namelist()
-        assert len(names) == 2
-        assert any("Alice" in name for name in names)
-        assert any("Bob" in name for name in names)
+        assert len(names) == 3
+        
+        # Check slugs
+        assert any(name.endswith("_asha-rao.pdf") for name in names)
+        assert any(name.endswith("_zoe-muller.pdf") for name in names)
+        assert any(name.endswith("_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.pdf") for name in names)

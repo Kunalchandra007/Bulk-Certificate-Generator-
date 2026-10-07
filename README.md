@@ -13,6 +13,8 @@ A highly scalable, background-processing API for generating bulk PDF certificate
 
 ## Demo
 
+[Watch Demo Video on Google Drive](https://drive.google.com/file/d/1zRRBIT-n-OEDQiOgu14_DNAWbTv3_mcq/view?usp=sharing)
+
 ![Demo](docs/demo.gif)
 
 Run it yourself (with the server running):

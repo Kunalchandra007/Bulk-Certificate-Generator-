@@ -123,7 +123,19 @@ def download_certificate(job_id: uuid.UUID, certificate_number: str, db: Session
     )
 
 
+
+import unicodedata
+import re
+
+def slugify_name(name: str, max_len: int = 40) -> str:
+    """\'Zoë Müller\' -> \'zoe-muller\'; empty/odd input -> \'recipient\'."""
+    normalized = unicodedata.normalize("NFKD", name)          # ë -> e + accent mark
+    ascii_name = normalized.encode("ascii", "ignore").decode("ascii")  # drop accent marks
+    slug = re.sub(r"[^A-Za-z0-9]+", "-", ascii_name).strip("-").lower()
+    return slug[:max_len].strip("-") or "recipient"
+
 @router.get("/{job_id}/download/", response_class=FileResponse)
+
 def download_zip(job_id: uuid.UUID, db: Session = Depends(get_db)):
     """Download a ZIP containing all SUCCESS certificates for the job."""
     from app.models import JobStatus
@@ -156,14 +168,8 @@ def download_zip(job_id: uuid.UUID, db: Session = Depends(get_db)):
                 continue
             pdf_path = storage.get_path(str(job_id), r.certificate_number)
             if pdf_path.exists():
-                # Safe filename: certNumber_name.pdf
-                safe_name = "".join(c if c.isalnum() else "_" for c in r.name)
-                # compress consecutive underscores
-                import re
-
-                safe_name = re.sub(r"_+", "_", safe_name).strip("_")
-                filename = f"{r.certificate_number}_{safe_name}.pdf"
-                zf.write(pdf_path, arcname=filename)
+                arcname = f"{r.certificate_number}_{slugify_name(r.name)}.pdf"
+                zf.write(pdf_path, arcname=arcname)
 
     # Use FileResponse with a background task to delete the file after sending (in a real app),
     # but for simplicity FileResponse serves the static file. To cleanup we'd need a background task,
@@ -171,5 +177,5 @@ def download_zip(job_id: uuid.UUID, db: Session = Depends(get_db)):
     return FileResponse(
         path=zip_path,
         media_type="application/zip",
-        filename=f"certificates_{job_id}.zip",
+        filename=f"certificates-{str(job_id)[:8]}.zip",
     )
